@@ -1,18 +1,23 @@
 plugins {
-    id 'groovy'
-    id 'java-library'
+    id "java-library"
+    id "eclipse"
+    id "idea"
+    id "org.grails.grails-plugin"
+    id 'signing'
     id 'io.github.gradle-nexus.publish-plugin'
     id 'maven-publish'
-    id 'signing'
 }
 
 version =  projectVersion
 group = 'org.grails.plugins'
-ext.set('grailsVersion', libs.versions.grails.get())
-ext.set('isReleaseVersion', !version.toString().endsWith('-SNAPSHOT'))
-ext.set('isSnapshot', !isReleaseVersion)
 
-apply plugin: 'org.grails.grails-plugin' // Needs to be applied after grailsVersion has been set
+
+ext.set('isSnapshot', projectVersion.endsWith('-SNAPSHOT'))
+ext.set('isReleaseVersion', !isSnapshot)
+
+ext.set('signing.keyId', project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY'))
+ext.set('signing.secretKeyRingFile', project.findProperty('signing.secretKeyRingFile') ?:  System.getenv('SIGNING_PASSPHRASE') ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg")
+ext.set('signing.password', project.findProperty("signing.password") ?: System.getenv('SIGNING_PASSPHRASE'))
 
 repositories {
   mavenLocal()
@@ -20,19 +25,36 @@ repositories {
   maven { url = 'https://repo.grails.org/grails/core' }
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.grails:grails-bom:$grailsVersion"
+    }
+    applyMavenExclusions false
+}
+repositories {
+    mavenCentral()
+    maven { url "https://repo.grails.org/grails/core" }
+}
+
 dependencies {
 
-    api libs.quartz
+    api "org.quartz-scheduler:quartz:$quartzVersion"
 
-    implementation libs.grails.bootstrap
-    implementation libs.grails.core
-    implementation libs.groovy.sql
-    implementation libs.spring.beans
-    implementation libs.spring.context
-    implementation libs.spring.context.support
+    implementation "org.grails:grails-bootstrap:$grailsVersion"
+    implementation "org.grails:grails-core:$grailsVersion"
+    implementation "org.apache.groovy:groovy-sql:$groovyVersion"
+    implementation 'org.springframework:spring-beans:6.2.0'
+    implementation 'org.springframework:spring-context:6.2.0'
+    implementation 'org.springframework:spring-context-support:6.2.0'
+    compileOnly "org.apache.groovy:groovy:$groovyVersion"
+    compileOnly "jakarta.annotation:jakarta.annotation-api:${javaxAnnotationApiVersion}"
 
-    compileOnly libs.groovy.core // CompileStatic and Slf4j
-    compileOnly libs.javax.annotation.api // Provided
 
     testImplementation libs.spock.core
 
@@ -43,4 +65,23 @@ apply from: layout.projectDirectory.file('gradle/java-config.gradle')
 apply from: layout.projectDirectory.file('gradle/grails-plugin-config.gradle')
 apply from: layout.projectDirectory.file('gradle/testing-config.gradle')
 apply from: layout.projectDirectory.file('gradle/documentation-config.gradle')
-apply from: layout.projectDirectory.file('gradle/publishing.gradle')
+
+
+if (isReleaseVersion) {
+    apply plugin: "io.github.gradle-nexus.publish-plugin"
+
+    nexusPublishing {
+        repositories {
+            sonatype {
+                def ossUser = System.getenv("SONATYPE_USERNAME") ?: project.hasProperty("sonatypeOssUsername") ? project.sonatypeOssUsername : ''
+                def ossPass = System.getenv("SONATYPE_PASSWORD") ?: project.hasProperty("sonatypeOssPassword") ? project.sonatypeOssPassword : ''
+                def ossStagingProfileId = System.getenv("SONATYPE_STAGING_PROFILE_ID") ?: project.hasProperty("sonatypeOssStagingProfileId") ? project.sonatypeOssStagingProfileId : ''
+                nexusUrl = uri("https://s01.oss.sonatype.org/service/local/")
+                snapshotRepositoryUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+                username = ossUser
+                password = ossPass
+                stagingProfileId = ossStagingProfileId
+            }
+        }
+    }
+}

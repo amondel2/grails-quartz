@@ -32,7 +32,7 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean
 class QuartzGrailsPlugin extends Plugin {
 
     // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "6.0.0 > *"
+    def grailsVersion = "7.0.0-SNAPSHOT > *"
 
 	def watchedResources = "file:./grails-app/jobs/**/*Job.groovy"
 
@@ -155,10 +155,10 @@ Adds Quartz job scheduling features
      */
     def loadQuartzProperties() {
         Properties quartzProperties = new Properties()
-        if (config.containsKey('quartz')) {
+        if (config.getProperty('quartz')) {
             // Convert to a properties file adding a prefix to each property
             ConfigObject configObject = new ConfigObject()
-            configObject.putAll(config.quartz)
+            configObject.putAll(config.getProperty('quartz') ?: [:])
             quartzProperties << configObject.toProperties('org.quartz')
         }
         quartzProperties
