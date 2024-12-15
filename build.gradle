@@ -1,18 +1,43 @@
-plugins {
-    id 'groovy'
-    id 'java-library'
-    id 'io.github.gradle-nexus.publish-plugin'
-    id 'maven-publish'
-    id 'signing'
+import org.grails.gradle.plugin.doc.PublishGuideTask
+
+buildscript {
+    repositories {
+        maven { url "https://repo.grails.org/grails/core" }
+        mavenCentral()
+        maven {
+            url = 'https://repo.gradle.org/gradle/libs-releases'
+            description = 'Needed for Gradle Tooling API'
+        }
+    }
+    dependencies {
+        classpath "org.grails.grails-doc:org.grails.grails-doc.gradle.plugin:$grailsVersion"
+        classpath "org.grails:grails-gradle-plugin:$grailsVersion"
+        classpath "org.gradle:gradle-tooling-api:$gradleToolingApiVersion"
+    }
 }
+
+plugins {
+    id "java-library"
+    id "eclipse"
+    id "idea"
+    id 'signing'
+    id 'maven-publish'
+}
+
+apply plugin: "org.grails.grails-plugin"
+apply plugin: 'org.grails.grails-doc'
+apply plugin: "io.github.gradle-nexus.publish-plugin"
 
 version =  projectVersion
 group = 'org.grails.plugins'
-ext.set('grailsVersion', libs.versions.grails.get())
-ext.set('isReleaseVersion', !version.toString().endsWith('-SNAPSHOT'))
-ext.set('isSnapshot', !isReleaseVersion)
 
-apply plugin: 'org.grails.grails-plugin' // Needs to be applied after grailsVersion has been set
+
+ext.set('isSnapshot', projectVersion.endsWith('-SNAPSHOT'))
+ext.set('isReleaseVersion', !isSnapshot)
+
+ext.set('signing.keyId', project.findProperty('signing.keyId') ?: System.getenv('SIGNING_KEY'))
+ext.set('signing.secretKeyRingFile', project.findProperty('signing.secretKeyRingFile') ?:  System.getenv('SIGNING_PASSPHRASE') ?: "${System.properties['user.home']}${File.separator}.gnupg${File.separator}secring.gpg")
+ext.set('signing.password', project.findProperty("signing.password") ?: System.getenv('SIGNING_PASSPHRASE'))
 
 repositories {
   mavenLocal()
@@ -20,27 +45,158 @@ repositories {
   maven { url = 'https://repo.grails.org/grails/core' }
 }
 
-dependencies {
-
-    api libs.quartz
-
-    implementation libs.grails.bootstrap
-    implementation libs.grails.core
-    implementation libs.groovy.sql
-    implementation libs.spring.beans
-    implementation libs.spring.context
-    implementation libs.spring.context.support
-
-    compileOnly libs.groovy.core // CompileStatic and Slf4j
-    compileOnly libs.javax.annotation.api // Provided
-
-    testImplementation libs.spock.core
-
-    testRuntimeOnly libs.slf4j.nop // Get rid of warning about missing slf4j implementation during test task
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
-apply from: layout.projectDirectory.file('gradle/java-config.gradle')
-apply from: layout.projectDirectory.file('gradle/grails-plugin-config.gradle')
-apply from: layout.projectDirectory.file('gradle/testing-config.gradle')
-apply from: layout.projectDirectory.file('gradle/documentation-config.gradle')
-apply from: layout.projectDirectory.file('gradle/publishing.gradle')
+dependencyManagement {
+    imports {
+        mavenBom "org.grails:grails-bom:$grailsVersion"
+    }
+    applyMavenExclusions false
+}
+repositories {
+    mavenCentral()
+    maven { url "https://repo.grails.org/grails/core" }
+}
+
+dependencies {
+
+    api "org.quartz-scheduler:quartz:$quartzVersion"
+
+    implementation "org.grails:grails-bootstrap:$grailsVersion"
+    implementation "org.grails:grails-core:$grailsVersion"
+    implementation "org.apache.groovy:groovy-sql:$groovyVersion"
+    implementation "org.springframework:spring-beans:${springVersion}"
+    implementation "org.springframework:spring-context:${springVersion}"
+    implementation "org.springframework:spring-context-support:${springVersion}"
+    compileOnly "org.apache.groovy:groovy:$groovyVersion"
+    compileOnly "jakarta.annotation:jakarta.annotation-api:${javaxAnnotationApiVersion}"
+
+
+    testImplementation "org.spockframework:spock-core:$spocVersion"
+
+    testRuntimeOnly "org.slf4j:slf4j-nop:$slf4jVersion" // Get rid of warning about missing slf4j implementation during test task
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+    withJavadocJar()
+}
+
+
+tasks.named('bootJar') {
+    enabled = false // Plugins should not create a bootJar
+}
+tasks.named('jar', Jar) {
+    enabled = true // Enable the jar task again, as the bootJar task has been disabled
+    archiveClassifier = '' // Remove '-plain' suffix from jar file name
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging { events 'passed', 'skipped', 'failed', 'standardOut', 'standardError' }
+}
+
+jar {
+    exclude "application.groovy"
+    exclude "src/test/projects/**"
+}
+
+
+configurations.register('groovydocConfiguration')
+configurations.register('guideConfiguration')
+
+dependencies {
+
+    groovydocConfiguration localGroovy(), {
+        because 'groovydoc needs to run with the same version as Gradle'
+    }
+
+    guideConfiguration "org.grails:grails-docs:$grailsVersion"
+    guideConfiguration "org.apache.groovy:groovy-templates:$groovyVersion"
+}
+
+tasks.withType(Groovydoc).configureEach {
+    access = GroovydocAccess.PRIVATE
+    processScripts = false
+    includeMainForScripts = false
+    includeAuthor = true
+    classpath = configurations.groovydocConfiguration
+    groovyClasspath = configurations.groovydocConfiguration
+}
+
+tasks.withType(PublishGuideTask).configureEach {
+    classpath = configurations.guideConfiguration
+}
+
+if (isReleaseVersion) {
+    nexusPublishing {
+        repositories {
+            sonatype {
+                def ossUser = System.getenv("SONATYPE_USERNAME") ?: project.hasProperty("sonatypeOssUsername") ? project.sonatypeOssUsername : ''
+                def ossPass = System.getenv("SONATYPE_PASSWORD") ?: project.hasProperty("sonatypeOssPassword") ? project.sonatypeOssPassword : ''
+                def ossStagingProfileId = System.getenv("SONATYPE_STAGING_PROFILE_ID") ?: project.hasProperty("sonatypeOssStagingProfileId") ? project.sonatypeOssStagingProfileId : ''
+                nexusUrl = uri("https://s01.oss.sonatype.org/service/local/")
+                snapshotRepositoryUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+                username = ossUser
+                password = ossPass
+                stagingProfileId = ossStagingProfileId
+            }
+        }
+    }
+}
+
+publishing {
+    if (isSnapshot) {
+        repositories {
+            maven {
+                credentials {
+                    def u = System.getenv("ARTIFACTORY_USERNAME") ?: project.findProperty("artifactoryPublishUsername") ?: ''
+                    def p = System.getenv("ARTIFACTORY_PASSWORD") ?: project.findProperty("artifactoryPublishPassword") ?: ''
+                    username = u
+                    password = p
+                }
+                url = uri('https://repo.grails.org/grails/plugins3-snapshots-local')
+            }
+        }
+    }
+
+    publications {
+        maven(MavenPublication) {
+
+            groupId = project.group
+            version = project.version
+
+            from components.java
+
+            artifact sourcesJar
+            artifact javadocJar
+
+            pom.withXml {
+
+                def pomNode = asNode()
+                pomNode.children().last() + pomInfo
+
+                // dependency management shouldn't be included
+                try { pomNode.dependencyManagement.replaceNode({}) } catch (Throwable ignore) {}
+            }
+        }
+    }
+}
+
+if (isReleaseVersion) {
+    afterEvaluate {
+        signing {
+            required = { isReleaseVersion && gradle.taskGraph.hasTask('publish') }
+            sign(publishing.publications.maven)
+        }
+    }
+}
+
+tasks.withType(Sign) {
+    onlyIf { isReleaseVersion }
+}

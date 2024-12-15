@@ -7,8 +7,8 @@ on:
     branches:
       - '[3-9]+.[0-9]+.x'
 env:
-  GIT_USER_NAME: puneetbehl
-  GIT_USER_EMAIL: behlp@unityfoundation.io
+  GIT_USER_NAME: 'grails-build'
+  GIT_USER_EMAIL: 'grails-build@users.noreply.github.com'
 
 jobs:
 
@@ -20,14 +20,13 @@ jobs:
       fail-fast: true
       matrix:
         java: [17]
-
     steps:
       - uses: actions/checkout@v4
       - uses: gradle/wrapper-validation-action@v2
       - uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: ${{ matrix.java }}
+          distribution: 'liberica'
+          java-version: 17
       - uses: gradle/actions/setup-gradle@v3
         env:
           GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
@@ -43,7 +42,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: gradle/wrapper-validation-action@v2
       - uses: actions/setup-java@v4
-        with: { java-version: 17, distribution: temurin }
+        with:
+          distribution: 'liberica'
+          java-version: 17
 
       - name: Build Project
         uses: gradle/actions/setup-gradle@v3
@@ -77,7 +78,7 @@ jobs:
         uses: micronaut-projects/github-pages-deploy-action@grails
         env:
           BRANCH: gh-pages
-          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
+          COMMIT_EMAIL: 'grails-build@users.noreply.github.com'
+          COMMIT_NAME: 'grails-build'
           FOLDER: build/docs/manual
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
