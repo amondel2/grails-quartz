@@ -4,15 +4,10 @@ buildscript {
     repositories {
         maven { url "https://repo.grails.org/grails/core" }
         mavenCentral()
-        maven {
-            url = 'https://repo.gradle.org/gradle/libs-releases'
-            description = 'Needed for Gradle Tooling API'
-        }
     }
     dependencies {
         classpath "org.grails.grails-doc:org.grails.grails-doc.gradle.plugin:$grailsVersion"
         classpath "org.grails:grails-gradle-plugin:$grailsVersion"
-        classpath "org.gradle:gradle-tooling-api:$gradleToolingApiVersion"
     }
 }
 
@@ -66,17 +61,16 @@ dependencies {
 
     api "org.quartz-scheduler:quartz:$quartzVersion"
 
-    implementation "org.grails:grails-bootstrap:$grailsVersion"
-    implementation "org.grails:grails-core:$grailsVersion"
-    implementation "org.apache.groovy:groovy-sql:$groovyVersion"
-    implementation "org.springframework:spring-beans:${springVersion}"
-    implementation "org.springframework:spring-context:${springVersion}"
-    implementation "org.springframework:spring-context-support:${springVersion}"
-    compileOnly "org.apache.groovy:groovy:$groovyVersion"
-    compileOnly "jakarta.annotation:jakarta.annotation-api:${javaxAnnotationApiVersion}"
+    implementation "org.grails:grails-bootstrap"
+    implementation "org.grails:grails-core"
+    implementation "org.apache.groovy:groovy-sql"
+    implementation "org.springframework:spring-beans"
+    implementation "org.springframework:spring-context"
+    implementation "org.springframework:spring-context-support"
+    compileOnly "org.apache.groovy:groovy"
+    compileOnly "jakarta.annotation:jakarta.annotation-api"
 
-
-    testImplementation "org.spockframework:spock-core:$spocVersion"
+    testImplementation "org.spockframework:spock-core"
 
     testRuntimeOnly "org.slf4j:slf4j-nop:$slf4jVersion" // Get rid of warning about missing slf4j implementation during test task
 }
@@ -117,7 +111,7 @@ dependencies {
     }
 
     guideConfiguration "org.grails:grails-docs:$grailsVersion"
-    guideConfiguration "org.apache.groovy:groovy-templates:$groovyVersion"
+    guideConfiguration "org.apache.groovy:groovy-templates"
 }
 
 tasks.withType(Groovydoc).configureEach {
