@@ -78,7 +78,7 @@ jobs:
         uses: micronaut-projects/github-pages-deploy-action@grails
         env:
           BRANCH: gh-pages
-          COMMIT_EMAIL:  ${{ env.GIT_USER_EMAIL }}
-          COMMIT_NAME:  ${{ env.GIT_USER_NAME }}
+          COMMIT_EMAIL: ${{ env.GIT_USER_EMAIL }}
+          COMMIT_NAME: ${{ env.GIT_USER_NAME }}
           FOLDER: build/docs/manual
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
