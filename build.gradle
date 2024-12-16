@@ -75,13 +75,6 @@ dependencies {
     testRuntimeOnly "org.slf4j:slf4j-nop:$slf4jVersion" // Get rid of warning about missing slf4j implementation during test task
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    withSourcesJar()
-    withJavadocJar()
-}
-
-
 tasks.named('bootJar') {
     enabled = false // Plugins should not create a bootJar
 }
