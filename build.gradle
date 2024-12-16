@@ -110,7 +110,7 @@ dependencies {
         because 'groovydoc needs to run with the same version as Gradle'
     }
 
-    guideConfiguration "org.grails:grails-docs:$grailsVersion"
+    guideConfiguration "org.grails:grails-docs"
     guideConfiguration "org.apache.groovy:groovy-templates"
 }
 
