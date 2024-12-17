@@ -37,8 +37,7 @@ class QuartzGrailsPlugin extends Plugin {
 	def watchedResources = "file:./grails-app/jobs/**/*Job.groovy"
 
 	def title = "Quartz" // Headline display name of the plugin
-    def author = "Jeff Brown"
-    def authorEmail = "brownj@ociweb.com"
+
     def description = '''\
 Adds Quartz job scheduling features
 '''
