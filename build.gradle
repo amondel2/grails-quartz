@@ -17,13 +17,14 @@ plugins {
     id "idea"
 }
 
+
+version =  projectVersion
+group = 'org.grails.plugins'
+
 apply plugin: "org.grails.grails-plugin"
 apply plugin: 'org.grails.grails-doc'
 apply plugin: 'org.grails.grails-publish'
 
-
-version =  projectVersion
-group = 'org.grails.plugins'
 
 repositories {
   mavenLocal()
@@ -31,18 +32,10 @@ repositories {
   maven { url = 'https://repo.grails.org/grails/core' }
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+compileJava {
+    options.release = 17
 }
 
-dependencyManagement {
-    imports {
-        mavenBom "org.grails:grails-bom:$grailsVersion"
-    }
-    applyMavenExclusions false
-}
 repositories {
     mavenCentral()
     maven { url "https://repo.grails.org/grails/core" }
@@ -64,14 +57,6 @@ dependencies {
     testImplementation "org.spockframework:spock-core"
 
     testRuntimeOnly "org.slf4j:slf4j-nop:$slf4jVersion" // Get rid of warning about missing slf4j implementation during test task
-}
-
-tasks.named('bootJar') {
-    enabled = false // Plugins should not create a bootJar
-}
-tasks.named('jar', Jar) {
-    enabled = true // Enable the jar task again, as the bootJar task has been disabled
-    archiveClassifier = '' // Remove '-plain' suffix from jar file name
 }
 
 jar {
